@@ -21,7 +21,7 @@ Config_base = {
     'POS WEIGHT': None,
 
     # Model
-    'OUT MODE': 'origin',
+    'AUG MODE': 'origin',
     'LOSS MODE': 'dicebce',
     'UNCERTAINTY WEIGHT': 1,
     'ATTENTION': False,
@@ -80,4 +80,12 @@ Config6 = {
 }
 
 
-configs = [Config0, Config1, Config2, Config3, Config4, Config5, Config6]
+Config7 = {
+    'NAME': '7. specific',
+    'LOSS MODE': 'uncertainty',
+    'AUG MODE': 'specific',
+    'GROUP': 4,
+}
+
+
+configs = [Config0, Config1, Config2, Config3, Config4, Config5, Config6, Config7]
