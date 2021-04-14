@@ -10,6 +10,7 @@ from TrainUtils.Recorder import LossRecorder, SegRecorder
 from Network.MG_Net import MGNet
 from Network.Loss import DiceBCELoss
 from ImageProcess.Analysis import get_biggest_slice
+from ImageProcess.Operations import normalize01
 from Visualization.Image import show_multi_images
 
 from Utils.Dataset import MyDataset
@@ -55,7 +56,7 @@ def show_2d_uncertainty(recorder, casenames, save_dir):
         show_multi_images([{'name': 'label', 'img': img, 'roi': seg},
                            {'name': 'pred', 'img': img, 'roi': pred},
                            {'name': 'var', 'img': var},
-                           {'name': 'var roi', 'img': img, 'contour':var},
+                           {'name': 'var roi', 'img': img, 'contour':normalize01(var)},
                            {'name': 'group0', 'img': group0},
                            {'name': 'group1', 'img': group1},
                            {'name': 'group2', 'img': group2},
@@ -123,13 +124,15 @@ def inference(config):
     test_result_recorder.print_result()
 
     # show_3d(test_result_recorder)
-    # show_2d_uncertainty(test_result_recorder, casenames, join_path(model_save_dir, 'test_var'))
-    show_2d(test_result_recorder, casenames, join_path(model_save_dir, 'test_var'))
+    if config['GROUP'] > 1:
+        show_2d_uncertainty(test_result_recorder, casenames, join_path(model_save_dir, 'test_var'))
+    else:
+        show_2d(test_result_recorder, casenames, join_path(model_save_dir, 'test_var'))
 
 
 if __name__ == '__main__':
     config = Config_base.copy()
-    config.update(configs[4])
+    config.update(configs[6])
     config['PRELOAD'] = 2
     config['DEVICE'] = 0
     config['BATCH'] = 32

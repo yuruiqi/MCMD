@@ -24,13 +24,21 @@ def get_data(dict):
 def aug_in(data, augments, group):
     """
     data: {'image': (1, h, w, d), 'mask':(1, h, w, d), 'label':int}
-    augments:
+    augments: [] or [[], []...]
     group:
     """
+    if type(augments[0]) is list:
+        specific = True
+    else:
+        specific = False
+
     datas = []
     for i in range(group):
         data_aug = data.copy()
-        if augments is not None:
+        if specific:
+            for augment in augments[i]:
+                data_aug = augment(data_aug)
+        else:
             for augment in augments:
                 data_aug = augment(data_aug)
 
@@ -46,7 +54,7 @@ class MyDataset(Dataset):
     def __init__(self, datapath, config, preload=False, augment=False):
         self.shape = config['SHAPE']
         self.group = config['GROUP']
-        self.mode = config['OUT MODE']
+        self.mode = config['AUG MODE']
         self.augment = augment
 
         with open(datapath) as f:
@@ -69,6 +77,11 @@ class MyDataset(Dataset):
         self.scale_augments = [RandGaussianNoised(keys=['image'], prob=0.5, std=0.1),
                                RandScaleIntensityd(keys=['image'], factors=0.1, prob=0.5)
                                ]
+        self.specific_aug = [[RandGaussianNoised(keys=['image'], prob=0.9), ],
+                          [RandScaleIntensityd(keys=['image'], factors=0.5, prob=0.9), ],
+                          [RandHistogramShiftd(keys=['image'], prob=0.9), ],
+                          [RandShiftIntensityd(keys=['image'], prob=0.9, offsets=1), ]
+                          ]
 
     def __getitem__(self, index):
         # index = 1  # For debug
@@ -97,6 +110,10 @@ class MyDataset(Dataset):
                 for augment in self.deformation_aug:
                     data = augment(data)
                 data = aug_in(data, self.scale_augments, self.group)
+            elif self.mode == 'specific':
+                for augment in self.deformation_aug:
+                    data = augment(data)
+                data = aug_in(data, self.specific_aug, self.group)
             elif self.mode == 'all':
                 augments = self.scale_augments + self.deformation_aug
                 data = aug_in(data, augments, self.group)
@@ -111,9 +128,13 @@ class MyDataset(Dataset):
 
 
 if __name__ == '__main__':
-    from Config import configs
+    from Config import configs, Config_base
+    config = Config_base.copy()
+    config.update(configs[7])
+    config['PRELOAD'] = 2
+    config['DEVICE'] = 3
+    config['BATCH'] = 32
 
-    config = configs[4]
     dataset = MyDataset(config['TRAIN'], config, augment=True, preload=False)
     dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
@@ -123,11 +144,19 @@ if __name__ == '__main__':
         for i in range(4):
             image = img[0,i]
             segmentation = seg[0, i]
-            slice = get_biggest_slice(segmentation)
 
-            plt.imshow(image[:, :, slice], cmap='gray')
-            plt.contour(segmentation[:, :, slice])
+            plt.imshow(image, cmap='gray')
+            plt.contour(segmentation)
             plt.show()
-
         break
-        # pass
+
+        # for i in range(4):
+        #     image = img[0,i]
+        #     segmentation = seg[0, i]
+        #     slice = get_biggest_slice(segmentation)
+        #
+        #     plt.imshow(image[:, :, slice], cmap='gray')
+        #     plt.contour(segmentation[:, :, slice])
+        #     plt.show()
+        #
+        # break

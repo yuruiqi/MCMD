@@ -42,7 +42,7 @@ def run(data_loader, model, criterion, optimizer, mode, loss_recorder, result_re
         if result_recorder is not None:
             if prediction.shape[1] > 1:
                 mean = prediction.mean(dim=1, keepdim=True).detach().cpu().numpy()
-                var = torch.sigmoid(prediction.var(dim=1)).detach().cpu().numpy()
+                var = prediction.var(dim=1).detach().cpu().numpy()
 
                 result_recorder.record(img.detach().cpu().numpy(), 'img')  # (batch, 1, h, w, d)
                 result_recorder.record(seg[:,0:1].detach().cpu().numpy(), 'label')  # (batch, 1, h, w, d)
