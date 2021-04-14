@@ -11,7 +11,7 @@ Config_base = {
     'VAL': '/homes/rqyu/Projects/MCMD/Data/Split Temp/val.json',
     'TEST': '/homes/rqyu/Projects/MCMD/Data/Split Temp/test.json',
 
-    'SAVE': r'/homes/rqyu/Projects/MCMD/Results',
+    'SAVE': r'/homes/clwang/Data/MCMD/Results',
 
     # Train
     'EPOCH': 1000,

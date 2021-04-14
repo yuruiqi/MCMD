@@ -59,7 +59,7 @@ def train(config):
 
     model_save_dir = join_path(config['SAVE'], config['NAME'])
     if not os.path.exists(model_save_dir):
-        os.mkdir(model_save_dir)
+        os.makedirs(model_save_dir)
 
     train_loader = DataLoader(MyDataset(config['TRAIN'], config, augment=True, preload=train_preload),
                               batch_size=config['BATCH'], shuffle=True, num_workers=5)
@@ -141,7 +141,7 @@ if __name__ == '__main__':
     parser.add_argument('--preload', type=int, default=0, help='0:all, 1:train, 2:none')
     parser.add_argument('--device', type=int, default=0, help='cuda id')
     parser.add_argument('--batch', type=int, default=32, help='batch size')
-
+    
     config_id = parser.parse_args().config
     config = Config_base.copy()
     config.update(configs[config_id])
@@ -150,10 +150,13 @@ if __name__ == '__main__':
     config['DEVICE'] = torch.device(f'cuda:{parser.parse_args().device}')
     config['BATCH'] = parser.parse_args().batch
 
-    # config = Config_base.copy()
-    # config.update(configs[5])
-    # config['PRELOAD'] = 2
-    # config['DEVICE'] = 3
-    # config['BATCH'] = 32
+    arguments = vars(parser.parse_args())
+    arguments.update(config)
+    arguments.pop('DEVICE')
+    
+    out_dir = join_path(config['SAVE'], config['NAME'])
+    os.makedirs(out_dir, exist_ok=True)
+    with open(join_path(out_dir, 'params.json'), 'w') as f:
+        json.dump(arguments, f, indent=2)
 
     train(config)
