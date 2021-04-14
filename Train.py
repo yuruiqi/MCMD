@@ -139,7 +139,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=int, default=0, help='the id of the config')
     parser.add_argument('--preload', type=int, default=0, help='0:all, 1:train, 2:none')
-    parser.add_argument('--device', type=int, default=2, help='cuda id')
+    parser.add_argument('--device', type=int, default=0, help='cuda id')
     parser.add_argument('--batch', type=int, default=32, help='batch size')
 
     config_id = parser.parse_args().config
