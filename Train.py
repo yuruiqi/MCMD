@@ -22,6 +22,26 @@ from Config import configs, Config_base
 from Utils.UncertaintyLoss import AllLoss
 
 
+def save_var_train(recorder, i, epoch, model_save_dir):
+    img = recorder.data_all[-2]['img'][i][0]
+    seg = recorder.results[-2]['label_merge'][i]
+    pred = recorder.results[-2]['pred_merge'][i]
+    var = recorder.data_all[-2]['var'][i]
+    score = recorder.data_all[-2]['score'][i]
+
+    var_dir = join_path(model_save_dir, 'var')
+    if not os.path.exists(var_dir):
+        os.mkdir(var_dir)
+
+    show_multi_images([{'name': 'label', 'img': img, 'roi': seg},
+                       {'name': 'pred', 'img': img, 'roi': pred},
+                       {'name': 'var', 'img': var},
+                       {'name': 'var2', 'img': img, 'roi': var}],
+                      arrangement=[2, 2],
+                      save_path=join_path(var_dir, f'{epoch}.png'),
+                      title=score.item())
+
+
 def train(config):
     filters = [x*config['GROUP'] for x in config['FILTERS']]
     shape = config['SHAPE']
@@ -51,16 +71,11 @@ def train(config):
     else:
         mode = '2d'
 
-    model = MGNet(group, filters, group, mode=mode, two_conv=config['TWO CONV'])
+    model = MGNet(group, filters, group, mode=mode, two_conv=config['TWO CONV'], attention=config['ATTENTION'])
     model.to(device)
 
-    if config['UNCERTAINTY'] is not None:
-        criterion = AllLoss(mode=config['UNCERTAINTY'],
-                            pos_weight=torch.ones(shape, device=device)*config['POS WEIGHT']
-                            if config['POS WEIGHT'] is not None else None)
-    else:
-        criterion = DiceBCELoss(weight=torch.ones(shape, device=device) * config['POS WEIGHT']
-        if config['POS WEIGHT'] is not None else None)
+    criterion = AllLoss(mode=config['LOSS MODE'], weight=config['UNCERTAINTY WEIGHT'])
+
     optimizer = torch.optim.SGD(model.parameters(), lr=config['LR'])
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.9)
 
@@ -94,24 +109,8 @@ def train(config):
         val_result_recorder.new_epoch()
         val_result_recorder.print_result()
 
-        if epoch%5 == 0:
-            img = val_result_recorder.data_all[-2]['img'][10][0]
-            seg = val_result_recorder.results[-2]['label_merge'][10]
-            pred = val_result_recorder.results[-2]['pred_merge'][10]
-            var = val_result_recorder.data_all[-2]['var'][10]
-            score = val_result_recorder.data_all[-2]['score'][10]
-
-            var_dir = join_path(model_save_dir, 'var')
-            if not os.path.exists(var_dir):
-                os.mkdir(var_dir)
-
-            show_multi_images([{'name':'label', 'img':img, 'roi':seg},
-                               {'name':'pred', 'img':img, 'roi':pred},
-                               {'name': 'var', 'img': var},
-                               {'name':'var2', 'img':img, 'roi':var}],
-                              arrangement=[2,2],
-                              save_path=join_path(var_dir, f'{epoch}.png'),
-                              title=score.item())
+        if group>1 and epoch%5 == 0:
+            save_var_train(val_result_recorder, 10, epoch, model_save_dir)
 
         train_result_recorder.clear()
         val_result_recorder.clear()
@@ -126,9 +125,14 @@ def train(config):
         if finish:
             break
 
+    train_loss_recorder.draw(save=True)
+    val_loss_recorder.draw(save=True)
+
     print('********** Best Epoch: {} **********'.format(best_epoch))
     train_loss_recorder.print_result(index=best_epoch, keys=['loss', 'dice', 'bce'])
     val_loss_recorder.print_result(index=best_epoch, keys=['loss', 'dice', 'bce'])
+    train_result_recorder.print_result(index=best_epoch)
+    val_result_recorder.print_result(index=best_epoch)
 
 
 if __name__ == '__main__':
@@ -147,9 +151,9 @@ if __name__ == '__main__':
     config['BATCH'] = parser.parse_args().batch
 
     # config = Config_base.copy()
-    # config.update(configs[6])
+    # config.update(configs[5])
     # config['PRELOAD'] = 2
-    # config['DEVICE'] = 0
+    # config['DEVICE'] = 3
     # config['BATCH'] = 32
 
     train(config)

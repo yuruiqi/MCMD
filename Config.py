@@ -21,71 +21,63 @@ Config_base = {
     'POS WEIGHT': None,
 
     # Model
-    'UNCERTAINTY': None,
     'OUT MODE': 'origin',
-    'SHAPE': [64,64,32],
+    'LOSS MODE': 'dicebce',
+    'UNCERTAINTY WEIGHT': 1,
+    'ATTENTION': False,
+    'SHAPE': [64,64],
     'GROUP': 1,
-    'TWO CONV': False,
+    'TWO CONV': True,
     'FILTERS': [16, 32, 64, 128, 256]
 }
 
+
 Config0 = {
-    'Name':'Unet',
-    'TWO CONV': True,
+    'NAME': '0.Unet',
 }
 
 Config1 = {
-    'NAME': 'Mgnet',
-    'GROUP':4
+    'NAME': '1.Mgnet',
+    'GROUP':4,
 }
 
 Config2 = {
-    'NAME': 'Uncertainty',
-    'UNCERTAINTY': 1,
+    'NAME': '2.Uncertainty',
+    'LOSS MODE': 'uncertainty',
     'GROUP': 4,
 }
 
 Config3 = {
-    'NAME': 'Uncertainty_aug',
-    'UNCERTAINTY': 1,
+    'NAME': '3.Uncertainty_aug',
+    'LOSS MODE': 'uncertainty',
     'AUG MODE': 'conservative',
     'GROUP': 4,
 }
+
 
 Config4 = {
-    'NAME': 'Unet_2d',
-    'TWO CONV': True,
-    'SHAPE': [64,64]
+    'NAME': '4.Uncertainty_aug_weight',
+    'LOSS MODE': 'uncertainty',
+    'AUG MODE': 'conservative',
+    'UNCERTAINTY WEIGHT': 100,
+    'GROUP': 4,
 }
+
 
 Config5 = {
-    'NAME': 'Mgnet_2d',
+    'NAME': '5.attention',
     'GROUP':4,
-    'SHAPE': [64, 64]
+    'ATTENTION':True
 }
+
 
 Config6 = {
-    'NAME': 'Uncertainty_2d',
-    'UNCERTAINTY': 1,
-    'GROUP': 4,
-    'SHAPE': [64, 64]
-}
-
-Config7 = {
-    'NAME': 'Uncertainty_aug_2d',
-    'UNCERTAINTY': 1,
+    'NAME': '6. Uncertantiy_aug_weight1000',
+    'LOSS MODE': 'uncertainty',
     'AUG MODE': 'conservative',
+    'UNCERTAINTY WEIGHT': 1000,
     'GROUP': 4,
-    'SHAPE': [64, 64]
-}
-
-Config8 = {
-    'NAME': 'Uncertainty_aug_2d_l1',
-    'UNCERTAINTY': 1,
-    'AUG MODE': 'conservative',
-    'GROUP': 4,
-    'SHAPE': [64, 64]
 }
 
 
-configs = [Config0, Config1, Config2, Config3, Config4, Config5, Config6, Config7, Config8]
+configs = [Config0, Config1, Config2, Config3, Config4, Config5, Config6]

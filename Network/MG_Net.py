@@ -2,9 +2,25 @@ import torch
 import torch.nn as nn
 
 
+def compute_var_map(x, group):
+    """
+    x: (batch, n*c, *)
+    """
+    shape = list(x.shape)
+    x = x.reshape([shape[0], group, shape[1]//group]+shape[2:])  # (batch, n, c, *)
+    x = x.var(dim=1, keepdim=True)  # (batch, 1, c, *)
+    x = torch.sigmoid(x)
+    x = x.repeat([1, group, 1]+[1,]*len(shape[2:]))  # (batch, n, c, *)
+    x = x.reshape(shape)
+    return x
+
+
 class Down(nn.Module):
-    def __init__(self, in_channel, out_channel, group, mode='3d', two_conv=False):
+    def __init__(self, in_channel, out_channel, group, mode='3d', two_conv=False, attention=False):
         super().__init__()
+        self.attention = attention
+        self.group = group
+
         if mode=='3d':
             maxpool = nn.MaxPool3d
             conv = nn.Conv3d
@@ -26,16 +42,21 @@ class Down(nn.Module):
     def forward(self, x):
         x = self.maxpool(x)
         x = self.conv(x)
+
+        if self.attention:
+            map = compute_var_map(x, self.group)
+            x = map * x
+
         x = self.bn(x)
         x = self.prelu(x)
         return x
 
 
 class Up(nn.Module):
-    def __init__(self, in_channel, out_channel, group, mode='3d', two_conv=False):
+    def __init__(self, in_channel, out_channel, group, mode='3d', two_conv=False, attention=False):
         super().__init__()
-
         self.group = group
+        self.attention = attention
 
         if mode=='3d':
             self.upsample = nn.Upsample(scale_factor=2, mode='trilinear', align_corners=True)
@@ -64,13 +85,18 @@ class Up(nn.Module):
         x = x.reshape([x_shape[0], -1]+x_shape[2:])  # (batch, n*(cx+cy), h, w, d)
 
         x = self.conv(x)
+
+        if self.attention:
+            map = compute_var_map(x, self.group)
+            x = map * x
+
         x = self.bn(x)
         x = self.prelu(x)
         return x
 
 
 class MGNet(nn.Module):
-    def __init__(self, in_channel, filters, group, mode='3d', two_conv=False):
+    def __init__(self, in_channel, filters, group, mode='3d', two_conv=False, attention=False):
         super().__init__()
         if mode=='3d':
             conv = nn.Conv3d
@@ -92,14 +118,14 @@ class MGNet(nn.Module):
                                      bn(filters[0]),
                                      nn.PReLU())
 
-        self.down1 = Down(filters[0], filters[1], group=group, mode=mode, two_conv=two_conv)
-        self.down2 = Down(filters[1], filters[2], group=group, mode=mode, two_conv=two_conv)
-        self.down3 = Down(filters[2], filters[3], group=group, mode=mode, two_conv=two_conv)
-        self.down4 = Down(filters[3], filters[4], group=group, mode=mode, two_conv=two_conv)
-        self.up1 = Up(filters[4]+filters[3], filters[3], group=group, mode=mode, two_conv=two_conv)
-        self.up2 = Up(filters[3]+filters[2], filters[2], group=group, mode=mode, two_conv=two_conv)
-        self.up3 = Up(filters[2]+filters[1], filters[1], group=group, mode=mode, two_conv=two_conv)
-        self.up4 = Up(filters[1]+filters[0], filters[0], group=group, mode=mode, two_conv=two_conv)
+        self.down1 = Down(filters[0], filters[1], group=group, mode=mode, two_conv=two_conv, attention=attention)
+        self.down2 = Down(filters[1], filters[2], group=group, mode=mode, two_conv=two_conv, attention=attention)
+        self.down3 = Down(filters[2], filters[3], group=group, mode=mode, two_conv=two_conv, attention=attention)
+        self.down4 = Down(filters[3], filters[4], group=group, mode=mode, two_conv=two_conv, attention=attention)
+        self.up1 = Up(filters[4]+filters[3], filters[3], group=group, mode=mode, two_conv=two_conv, attention=attention)
+        self.up2 = Up(filters[3]+filters[2], filters[2], group=group, mode=mode, two_conv=two_conv, attention=attention)
+        self.up3 = Up(filters[2]+filters[1], filters[1], group=group, mode=mode, two_conv=two_conv, attention=attention)
+        self.up4 = Up(filters[1]+filters[0], filters[0], group=group, mode=mode, two_conv=two_conv, attention=attention)
 
         if two_conv:
             self.class_conv = nn.Sequential(conv(filters[0], filters[0], kernel_size=3, padding=1, groups=group),
@@ -114,11 +140,9 @@ class MGNet(nn.Module):
         x: (batch, 1, h, w, d) or (batch, n*1, h, w, d) if group_in.
         """
         # TODO: check
-        if x.shape[1]==1 and self.group!=1:
-            if len(x.shape) == 5:
-                x = x.repeat(1,self.group,1,1,1)
-            if len(x.shape) == 4:
-                x = x.repeat(1, self.group, 1, 1)
+        if x.shape[1] < self.group:
+            dim = len(x.shape[2:])
+            x = x.repeat([1,self.group] + [1,]*dim)
 
         x1 = self.inc(x)  # [batch, n*c1, h, w, d]
         x2 = self.down1(x1)  # [batch, n*c2, h, w, d]
@@ -130,5 +154,6 @@ class MGNet(nn.Module):
         x = self.up3(x, x2)  # [batch, n*c2, h, w, d]
         x = self.up4(x, x1)  # [batch, n*c1, h, w, d]
         x = self.class_conv(x)  # [batch, n, h, w, d] before sigmoid
+        x = torch.sigmoid(x)
 
         return x

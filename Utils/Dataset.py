@@ -47,6 +47,7 @@ class MyDataset(Dataset):
         self.shape = config['SHAPE']
         self.group = config['GROUP']
         self.mode = config['OUT MODE']
+        self.augment = augment
 
         with open(datapath) as f:
             self.datalist = json.load(f)  # [{'image':path, 'mask':path, 'label':int}, ]
@@ -62,21 +63,12 @@ class MyDataset(Dataset):
                            ResizeWithPadOrCropd(keys=['image', 'mask'], spatial_size=self.shape),
                            ]
 
-        if augment:
-            if self.mode == 'origin' or self.mode == 'all':
-                self.augments = [RandFlipd(keys=['image', 'mask'], spatial_axis=2 if len(self.shape)==3 else None, prob=0.5),
-                                 RandRotated(keys=['image', 'mask'], range_z=30 if len(self.shape)==3 else 0.0, prob=0.5),
-                                 RandGaussianNoised(keys=['image'], prob=0.5),
-                                 RandScaleIntensityd(keys=['image'], factors=0.1, prob=0.5)
-                                 ]
-            elif self.mode == 'conservative':
-                self.augments = [RandGaussianNoised(keys=['image'], prob=0.5),
-                                 RandScaleIntensityd(keys=['image'], factors=0.1, prob=0.5)
-                                 ]
-            else:
-                raise ValueError
-        else:
-            self.augments = None
+        self.deformation_aug = [RandFlipd(keys=['image', 'mask'], spatial_axis=2 if len(self.shape)==3 else None, prob=0.5),
+                                RandRotated(keys=['image', 'mask'], range_z=30 if len(self.shape)==3 else 0.0, prob=0.5),
+                                ]
+        self.scale_augments = [RandGaussianNoised(keys=['image'], prob=0.5, std=0.1),
+                               RandScaleIntensityd(keys=['image'], factors=0.1, prob=0.5)
+                               ]
 
     def __getitem__(self, index):
         # index = 1  # For debug
@@ -92,18 +84,22 @@ class MyDataset(Dataset):
             data['image'] = data['image'][:,:,slice]
             data['mask'] = data['mask'][:,:,slice]
 
-        # print('before',data['image_meta_dict']['original_affine'])
-
         for transform in self.transforms:
             data = transform(data)
-        # print('after', data['image_meta_dict']['affine'])
 
-        if self.mode == 'origin':
-            if self.augments is not None:
-                for augment in self.augments:
+        if self.augment:
+            if self.mode == 'origin':
+                for augment in self.deformation_aug:
                     data = augment(data)
-        elif self.mode == 'all' or self.mode == 'conservative':
-            data = aug_in(data, self.augments, self.group)
+                for augment in self.scale_augments:
+                    data = augment(data)
+            elif self.mode == 'conservative':
+                for augment in self.deformation_aug:
+                    data = augment(data)
+                data = aug_in(data, self.scale_augments, self.group)
+            elif self.mode == 'all':
+                augments = self.scale_augments + self.deformation_aug
+                data = aug_in(data, augments, self.group)
 
         img = data['image'].astype(np.float32)
         seg = data['mask'].astype(np.float32)

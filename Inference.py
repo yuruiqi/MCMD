@@ -37,13 +37,17 @@ def show_3d(recorder):
             plt.show()
 
 
-def show_2d_uncertainty(recorder, save_dir):
+def show_2d_uncertainty(recorder, casenames, save_dir):
     for i in range(len(recorder.data_all[-2]['img'])):
         img = recorder.data_all[-2]['img'][i][0]
         seg = recorder.results[-2]['label_merge'][i]
         pred = recorder.results[-2]['pred_merge'][i]
         var = recorder.data_all[-2]['var'][i]
-        label = recorder.data_all[-2]['label'][i]
+        score = recorder.data_all[-2]['score'][i]
+        group0 = recorder.data_all[-2]['group'][i][0]
+        group1 = recorder.data_all[-2]['group'][i][1]
+        group2 = recorder.data_all[-2]['group'][i][2]
+        group3 = recorder.data_all[-2]['group'][i][3]
 
         if not os.path.exists(save_dir):
             os.mkdir(save_dir)
@@ -51,10 +55,31 @@ def show_2d_uncertainty(recorder, save_dir):
         show_multi_images([{'name': 'label', 'img': img, 'roi': seg},
                            {'name': 'pred', 'img': img, 'roi': pred},
                            {'name': 'var', 'img': var},
-                           {'name': 'var2', 'img': img, 'roi': var}],
-                          arrangement=[2, 2],
+                           {'name': 'var roi', 'img': img, 'contour':var},
+                           {'name': 'group0', 'img': group0},
+                           {'name': 'group1', 'img': group1},
+                           {'name': 'group2', 'img': group2},
+                           {'name': 'group3', 'img': group3}],
+                          arrangement=[2, 4],
                           save_path=join_path(save_dir, f'{i}.png'),
-                          title=label.item())
+                          title=f'{casenames[i]} {score.item()}')
+
+
+def show_2d(recorder, casenames, save_dir):
+    for i in range(len(recorder.data_all[-2]['img'])):
+        img = recorder.data_all[-2]['img'][i][0]
+        seg = recorder.results[-2]['label_merge'][i]
+        pred = recorder.results[-2]['pred_merge'][i]
+        score = recorder.data_all[-2]['score'][i]
+
+        if not os.path.exists(save_dir):
+            os.mkdir(save_dir)
+
+        show_multi_images([{'name': 'label', 'img': img, 'roi': seg},
+                           {'name': 'pred', 'img': img, 'roi': pred}],
+                          arrangement=[1,2],
+                          save_path=join_path(save_dir, f'{i}.png'),
+                          title=f'{casenames[i]} {score.item()}')
 
 
 def inference(config):
@@ -69,7 +94,7 @@ def inference(config):
     test_loader = DataLoader(MyDataset(config['TEST'], config, augment=False, preload=False),
                              batch_size=config['BATCH'], shuffle=False, num_workers=5)
 
-    # print(test_loader.dataset.datalist[2])
+    casenames = [x['image'] for x in test_loader.dataset.datalist]
 
     if len(shape) == 3:
         mode = '3d'
@@ -78,15 +103,9 @@ def inference(config):
 
     model = MGNet(group, filters, group, mode=mode, two_conv=config['TWO CONV'])
     model.load_state_dict(torch.load(join_path(model_save_dir, config['NAME'] + '.pkl')))
-    model.to(config['DEVICE'])
+    model.to(device)
 
-    if config['UNCERTAINTY'] is not None:
-        criterion = AllLoss(mode=config['UNCERTAINTY'],
-                            pos_weight=torch.ones(shape, device=device) * config['POS WEIGHT']
-                            if config['POS WEIGHT'] is not None else None)
-    else:
-        criterion = DiceBCELoss(weight=torch.ones(shape, device=device) * config['POS WEIGHT']
-        if config['POS WEIGHT'] is not None else None)
+    criterion = AllLoss(mode=config['LOSS MODE'], weight=config['UNCERTAINTY WEIGHT'])
 
     # Recorder
 
@@ -99,18 +118,20 @@ def inference(config):
     # Recorder
     test_loss_recorder.new_epoch()
     test_loss_recorder.print_result()
+
     test_result_recorder.new_epoch()
     test_result_recorder.print_result()
 
     # show_3d(test_result_recorder)
-    # show_2d_uncertainty(test_result_recorder, join_path(model_save_dir, 'test_var'))
+    # show_2d_uncertainty(test_result_recorder, casenames, join_path(model_save_dir, 'test_var'))
+    show_2d(test_result_recorder, casenames, join_path(model_save_dir, 'test_var'))
 
 
 if __name__ == '__main__':
     config = Config_base.copy()
-    config.update(configs[5])
+    config.update(configs[4])
     config['PRELOAD'] = 2
-    config['DEVICE'] = 1
+    config['DEVICE'] = 0
     config['BATCH'] = 32
 
     inference(config)
