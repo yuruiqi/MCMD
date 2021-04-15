@@ -124,10 +124,10 @@ def inference(config):
     test_result_recorder.print_result()
 
     # show_3d(test_result_recorder)
-    # if config['GROUP'] > 1:
-    #     show_2d_uncertainty(test_result_recorder, casenames, join_path(model_save_dir, 'test_var'))
-    # else:
-    #     show_2d(test_result_recorder, casenames, join_path(model_save_dir, 'test_var'))
+    if config['GROUP'] > 1:
+        show_2d_uncertainty(test_result_recorder, casenames, join_path(model_save_dir, 'test_var'))
+    else:
+        show_2d(test_result_recorder, casenames, join_path(model_save_dir, 'test_var'))
 
 
 if __name__ == '__main__':

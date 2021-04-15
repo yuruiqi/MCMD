@@ -2,6 +2,7 @@ import os
 import argparse
 import sys
 import json
+import shutil
 
 import torch
 from torch.utils.data import DataLoader
@@ -15,6 +16,7 @@ from TrainUtils.Recorder import LossRecorder, SegRecorder
 from Network.MG_Net import MGNet
 from Network.Loss import DiceBCELoss
 from Visualization.Image import show_multi_images
+from ImageProcess.Operations import normalize01
 
 from Run import run
 from Utils.Dataset import MyDataset
@@ -22,23 +24,49 @@ from Config import configs, Config_base
 from Utils.UncertaintyLoss import AllLoss
 
 
-def save_var_train(recorder, i, epoch, model_save_dir):
+def save_var_train(recorder, i, epoch, save_dir):
     img = recorder.data_all[-2]['img'][i][0]
     seg = recorder.results[-2]['label_merge'][i]
     pred = recorder.results[-2]['pred_merge'][i]
     var = recorder.data_all[-2]['var'][i]
     score = recorder.data_all[-2]['score'][i]
 
-    var_dir = join_path(model_save_dir, 'var')
-    if not os.path.exists(var_dir):
-        os.mkdir(var_dir)
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
 
     show_multi_images([{'name': 'label', 'img': img, 'roi': seg},
                        {'name': 'pred', 'img': img, 'roi': pred},
                        {'name': 'var', 'img': var},
                        {'name': 'var2', 'img': img, 'roi': var}],
                       arrangement=[2, 2],
-                      save_path=join_path(var_dir, f'{epoch}.png'),
+                      save_path=join_path(save_dir, f'{epoch}.png'),
+                      title=score.item())
+
+
+def save_2d_uncertainty_train(recorder, i, epoch, save_dir):
+    img = recorder.data_all[-2]['img'][i][0]
+    seg = recorder.results[-2]['label_merge'][i]
+    pred = recorder.results[-2]['pred_merge'][i]
+    var = recorder.data_all[-2]['var'][i]
+    score = recorder.data_all[-2]['score'][i]
+    group0 = recorder.data_all[-2]['group'][i][0]
+    group1 = recorder.data_all[-2]['group'][i][1]
+    group2 = recorder.data_all[-2]['group'][i][2]
+    group3 = recorder.data_all[-2]['group'][i][3]
+
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
+
+    show_multi_images([{'name': 'label', 'img': img, 'roi': seg},
+                       {'name': 'pred', 'img': img, 'roi': pred},
+                       {'name': 'var', 'img': var},
+                       {'name': 'var roi', 'img': img, 'contour':normalize01(var)},
+                       {'name': 'group0', 'img': group0},
+                       {'name': 'group1', 'img': group1},
+                       {'name': 'group2', 'img': group2},
+                       {'name': 'group3', 'img': group3}],
+                      arrangement=[2, 4],
+                      save_path=join_path(save_dir, f'{epoch}.png'),
                       title=score.item())
 
 
@@ -109,8 +137,11 @@ def train(config):
         val_result_recorder.new_epoch()
         val_result_recorder.print_result()
 
-        if group>1 and epoch%5 == 0:
-            save_var_train(val_result_recorder, 10, epoch, model_save_dir)
+        if group > 1 and epoch % 5 == 0:
+            if config['GROUP'] > 1:
+                save_2d_uncertainty_train(val_result_recorder, 10, epoch, join_path(model_save_dir, 'var'))
+            else:
+                save_var_train(val_result_recorder, 10, epoch, join_path(model_save_dir, 'var'))
 
         train_result_recorder.clear()
         val_result_recorder.clear()
@@ -151,9 +182,9 @@ if __name__ == '__main__':
     config['BATCH'] = parser.parse_args().batch
 
     # config = Config_base.copy()
-    # config.update(configs[5])
+    # config.update(configs[3])
     # config['PRELOAD'] = 2
     # config['DEVICE'] = 3
     # config['BATCH'] = 32
-
+    #
     train(config)
