@@ -14,8 +14,6 @@
       <change afterPath="$PROJECT_DIR$/../mission/filt_csv/.idea/filt_csv.iml" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/../wcl_code/.idea/wcl_code.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Inference.py" beforeDir="false" afterPath="$PROJECT_DIR$/Inference.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Train.py" beforeDir="false" afterPath="$PROJECT_DIR$/Train.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../PIRADS/.idea/PIRADS.iml" beforeDir="false" afterPath="$PROJECT_DIR$/../PIRADS/.idea/PIRADS.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../PIRADS/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../PIRADS/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../PIRADS/data/roi_shape.csv" beforeDir="false" afterPath="$PROJECT_DIR$/../PIRADS/data/roi_shape.csv" afterDir="false" />
@@ -70,7 +68,7 @@
     </option>
   </component>
   <component name="Git.Settings">
-    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="IgnoredFileRootStore">
     <option name="generatedRoots">
@@ -247,7 +245,7 @@
       <workItem from="1618140746086" duration="1133000" />
       <workItem from="1618141888682" duration="12016000" />
       <workItem from="1618228659405" duration="68472000" />
-      <workItem from="1618451881744" duration="17002000" />
+      <workItem from="1618451881744" duration="18667000" />
     </task>
     <servers />
   </component>
