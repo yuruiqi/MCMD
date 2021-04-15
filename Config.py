@@ -59,7 +59,7 @@ Config4 = {
     'NAME': '4.Uncertainty_aug_weight',
     'LOSS MODE': 'uncertainty',
     'AUG MODE': 'conservative',
-    'UNCERTAINTY WEIGHT': 100,
+    'UNCERTAINTY WEIGHT': 10,
     'GROUP': 4,
 }
 

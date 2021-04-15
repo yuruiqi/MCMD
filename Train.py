@@ -1,4 +1,5 @@
 import os
+import time
 import argparse
 import sys
 import json
@@ -57,7 +58,7 @@ def train(config):
         train_preload = False
         val_preload = False
 
-    model_save_dir = join_path(config['SAVE'], config['NAME'])
+    model_save_dir = out_dir
     if not os.path.exists(model_save_dir):
         os.makedirs(model_save_dir)
 
@@ -66,10 +67,7 @@ def train(config):
     val_loader = DataLoader(MyDataset(config['VAL'], config, preload=val_preload),
                             batch_size=config['BATCH'], shuffle=False, num_workers=5)
 
-    if len(shape)==3:
-        mode = '3d'
-    else:
-        mode = '2d'
+    mode = '3d' if len(shape)==3 else '2d'
 
     model = MGNet(group, filters, group, mode=mode, two_conv=config['TWO CONV'], attention=config['ATTENTION'])
     model.to(device)
@@ -141,20 +139,22 @@ if __name__ == '__main__':
     parser.add_argument('--preload', type=int, default=0, help='0:all, 1:train, 2:none')
     parser.add_argument('--device', type=int, default=0, help='cuda id')
     parser.add_argument('--batch', type=int, default=32, help='batch size')
+    args = parser.parse_args()
     
-    config_id = parser.parse_args().config
+    config_id = args.config
     config = Config_base.copy()
     config.update(configs[config_id])
 
-    config['PRELOAD'] = parser.parse_args().preload
-    config['DEVICE'] = torch.device(f'cuda:{parser.parse_args().device}')
-    config['BATCH'] = parser.parse_args().batch
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(args.device)
+    config['PRELOAD'] = args.preload
+    config['DEVICE'] = torch.device(f'cuda:{args.device}')
+    config['BATCH'] = args.batch
 
-    arguments = vars(parser.parse_args())
+    arguments = vars(args)
     arguments.update(config)
     arguments.pop('DEVICE')
     
-    out_dir = join_path(config['SAVE'], config['NAME'])
+    out_dir = join_path(config['SAVE'], config['NAME'], time.strftime("%m%d_%H%M"))
     os.makedirs(out_dir, exist_ok=True)
     with open(join_path(out_dir, 'params.json'), 'w') as f:
         json.dump(arguments, f, indent=2)

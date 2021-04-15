@@ -66,22 +66,28 @@ class MyDataset(Dataset):
             self.data = None
 
         pixdim = [0.7, 0.7, 1.25] if len(self.shape) == 3 else [0.7, 0.7]
-        self.transforms = [AddChanneld(keys=['image', 'mask', 'label']),
-                           Spacingd(keys=['image', 'mask'], pixdim=pixdim, mode=['bilinear', 'nearest']),
-                           ResizeWithPadOrCropd(keys=['image', 'mask'], spatial_size=self.shape),
-                           ]
+        self.transforms = [
+            AddChanneld(keys=['image', 'mask', 'label']),
+            Spacingd(keys=['image', 'mask'], pixdim=pixdim, mode=['bilinear', 'nearest']),
+            ResizeWithPadOrCropd(keys=['image', 'mask'], spatial_size=self.shape),
+        ]
 
-        self.deformation_aug = [RandFlipd(keys=['image', 'mask'], spatial_axis=2 if len(self.shape)==3 else None, prob=0.5),
-                                RandRotated(keys=['image', 'mask'], range_z=30 if len(self.shape)==3 else 0.0, prob=0.5),
-                                ]
-        self.scale_augments = [RandGaussianNoised(keys=['image'], prob=0.5, std=0.1),
-                               RandScaleIntensityd(keys=['image'], factors=0.1, prob=0.5)
-                               ]
-        self.specific_aug = [[RandGaussianNoised(keys=['image'], prob=0.9), ],
-                          [RandScaleIntensityd(keys=['image'], factors=0.5, prob=0.9), ],
-                          [RandHistogramShiftd(keys=['image'], prob=0.9), ],
-                          [RandShiftIntensityd(keys=['image'], prob=0.9, offsets=1), ]
-                          ]
+        self.deformation_aug = [
+            RandFlipd(keys=['image', 'mask'], spatial_axis=2 if len(self.shape)==3 else None, prob=0.5),
+            RandRotated(keys=['image', 'mask'], range_z=30 if len(self.shape)==3 else 0.0, prob=0.5),
+        ]
+
+        self.scale_augments = [
+            RandGaussianNoised(keys=['image'], prob=0.5, std=0.1),
+            RandScaleIntensityd(keys=['image'], factors=0.1, prob=0.5)
+        ]
+        
+        self.specific_aug = [
+            [RandGaussianNoised(keys=['image'], prob=0.9), ],
+            [RandScaleIntensityd(keys=['image'], factors=0.5, prob=0.9), ],
+            [RandHistogramShiftd(keys=['image'], prob=0.9), ],
+            [RandShiftIntensityd(keys=['image'], prob=0.9, offsets=1), ]
+        ]
 
     def __getitem__(self, index):
         # index = 1  # For debug
