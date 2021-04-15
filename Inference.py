@@ -102,7 +102,7 @@ def inference(config):
     else:
         mode = '2d'
 
-    model = MGNet(group, filters, group, mode=mode, two_conv=config['TWO CONV'])
+    model = MGNet(group, filters, group, mode=mode, two_conv=config['TWO CONV'], attention=config['ATTENTION'])
     model.load_state_dict(torch.load(join_path(model_save_dir, config['NAME'] + '.pkl')))
     model.to(device)
 
@@ -124,15 +124,15 @@ def inference(config):
     test_result_recorder.print_result()
 
     # show_3d(test_result_recorder)
-    if config['GROUP'] > 1:
-        show_2d_uncertainty(test_result_recorder, casenames, join_path(model_save_dir, 'test_var'))
-    else:
-        show_2d(test_result_recorder, casenames, join_path(model_save_dir, 'test_var'))
+    # if config['GROUP'] > 1:
+    #     show_2d_uncertainty(test_result_recorder, casenames, join_path(model_save_dir, 'test_var'))
+    # else:
+    #     show_2d(test_result_recorder, casenames, join_path(model_save_dir, 'test_var'))
 
 
 if __name__ == '__main__':
     config = Config_base.copy()
-    config.update(configs[6])
+    config.update(configs[10])
     config['PRELOAD'] = 2
     config['DEVICE'] = 0
     config['BATCH'] = 32

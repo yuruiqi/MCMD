@@ -67,7 +67,7 @@ Config4 = {
 Config5 = {
     'NAME': '5.attention',
     'GROUP':4,
-    'ATTENTION':True
+    'ATTENTION':'var'
 }
 
 
@@ -88,4 +88,26 @@ Config7 = {
 }
 
 
-configs = [Config0, Config1, Config2, Config3, Config4, Config5, Config6, Config7]
+Config8 = {
+    'NAME': '8.Mgnet_aug',
+    'GROUP':4,
+    'AUG MODE':'conservative'
+}
+
+
+Config9 = {
+    'NAME': '9.attention all',
+    'GROUP':4,
+    'ATTENTION':'all'
+}
+
+
+Config10 = {
+    'NAME': '10.uncertainty_attention',
+    'GROUP':4,
+    'ATTENTION':'var',
+    'LOSS MODE': 'uncertainty'
+}
+
+
+configs = [Config0, Config1, Config2, Config3, Config4, Config5, Config6, Config7, Config8, Config9, Config10]

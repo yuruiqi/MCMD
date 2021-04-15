@@ -2,16 +2,47 @@ import torch
 import torch.nn as nn
 
 
-def compute_var_map(x, group):
+class VarAttention(nn.Module):
+    def __init__(self, mode):
+        super().__init__()
+        self.mode = mode
+
+        if mode == 'all':
+            self.conv1 = nn.Conv2d(3, 1, 3, padding=1, bias=False)
+        elif mode == 'var':
+            self.conv1 = nn.Conv2d(1, 1, 3, padding=1, bias=False)
+        self.sigmoid = nn.Sigmoid()
+
+        nn.init.kaiming_normal_(self.conv1.weight, a=0, mode='fan_in')
+
+    def forward(self, x, group):
+        """
+        x: (batch, n*c, *)
+        """
+        avg_out = torch.mean(x, dim=1, keepdim=True)  # (batch, 1, *)
+        max_out, _ = torch.max(x, dim=1, keepdim=True)
+
+        shape = list(x.shape)
+        x = x.reshape([shape[0], group, shape[1] // group] + shape[2:])  # (batch, n, c, *)
+
+        var_out = compute_var_map(x)  # (batch, 1, *)
+
+        if self.mode == 'all':
+            x = torch.cat([avg_out, max_out, var_out], dim=1)
+        else:
+            x = var_out
+
+        x = self.conv1(x)
+
+        return self.sigmoid(x)
+
+
+def compute_var_map(x):
     """
-    x: (batch, n*c, *)
+    x: (batch, n, c, *)
     """
-    shape = list(x.shape)
-    x = x.reshape([shape[0], group, shape[1]//group]+shape[2:])  # (batch, n, c, *)
-    x = x.var(dim=1, keepdim=True)  # (batch, 1, c, *)
-    x = torch.sigmoid(x)
-    x = x.repeat([1, group, 1]+[1,]*len(shape[2:]))  # (batch, n, c, *)
-    x = x.reshape(shape)
+    x = x.var(dim=1)  # (batch, c, *)
+    x = x.mean(dim=1, keepdim=True)  # (batch, 1, *)
     return x
 
 
@@ -39,12 +70,15 @@ class Down(nn.Module):
         self.bn = bn(out_channel)
         self.prelu = nn.PReLU()
 
+        if attention:
+            self.varattention = VarAttention(attention)
+
     def forward(self, x):
         x = self.maxpool(x)
         x = self.conv(x)
 
         if self.attention:
-            map = compute_var_map(x, self.group)
+            map = self.varattention(x, self.group)
             x = map * x
 
         x = self.bn(x)
@@ -75,6 +109,9 @@ class Up(nn.Module):
         self.bn = bn(out_channel)
         self.prelu = nn.PReLU()
 
+        if attention:
+            self.varattention = VarAttention(attention)
+
     def forward(self, x, y):
         x = self.upsample(x)
 
@@ -87,8 +124,8 @@ class Up(nn.Module):
         x = self.conv(x)
 
         if self.attention:
-            map = compute_var_map(x, self.group)
-            x = map * x
+            map = self.varattention(x, self.group)
+            x = (map+1) * x
 
         x = self.bn(x)
         x = self.prelu(x)
